@@ -8,13 +8,6 @@ const actions = [
       "Use a short form to explain the idea, why it matters, and who it helps.",
     variant: "primary",
   },
-  {
-    href: "/admin",
-    title: "Review ideas",
-    description:
-      "See submitted ideas, sort the list, and focus on the highest-value work first.",
-    variant: "secondary",
-  },
 ] as const;
 
 export default function Home() {
@@ -36,8 +29,8 @@ export default function Home() {
               </p>
             </div>
             <p className="max-w-xl rounded-2xl bg-slate-50 px-5 py-4 text-base leading-7 text-slate-600">
-              Choose one option below. Both screens are designed to be quick,
-              clear, and easy to use for non-technical teams.
+              Use the button below to share a new idea. The admin review area
+              stays separate from the main welcome page.
             </p>
           </div>
 

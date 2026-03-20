@@ -1,32 +1,9 @@
 import Link from "next/link";
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-const useCaseTable = process.env.SUPABASE_USE_CASES_TABLE ?? "use_cases";
+import { updateIdeaRating } from "./actions";
+import { fetchUseCases } from "./use-cases";
 
 type SearchParamValue = string | string[] | undefined;
-
-type UseCaseRow = {
-  id?: string | number;
-  title?: string | null;
-  business_area?: string | null;
-  urgency?: string | null;
-  status?: string | null;
-  impact_score?: number | string | null;
-  feasibility_score?: number | string | null;
-  created_at?: string | null;
-};
-
-type AdminRequest = {
-  id: string;
-  name: string;
-  businessArea: string;
-  priority: string;
-  status: string;
-  impactScore: number;
-  feasibilityScore: number;
-  createdAt: string;
-};
 
 function readParam(value: SearchParamValue) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -45,41 +22,19 @@ function getBadgeClasses(status: string) {
   }
 }
 
-function toTitleCase(value: string) {
-  return value
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
-}
+function buildReturnPath(status: string, businessArea: string) {
+  const params = new URLSearchParams();
 
-function toNumber(value: UseCaseRow["impact_score"]) {
-  if (typeof value === "number") {
-    return value;
+  if (status) {
+    params.set("status", status);
   }
 
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+  if (businessArea) {
+    params.set("businessArea", businessArea);
   }
 
-  return 0;
-}
-
-function mapRowToRequest(row: UseCaseRow, index: number): AdminRequest {
-  const urgency = row.urgency ? toTitleCase(row.urgency) : "Not set";
-  const status = row.status ? toTitleCase(row.status) : "New";
-
-  return {
-    id: String(row.id ?? row.created_at ?? row.title ?? index),
-    name: row.title?.trim() || "Untitled idea",
-    businessArea: row.business_area?.trim() || "Not set",
-    priority: urgency,
-    status,
-    impactScore: toNumber(row.impact_score),
-    feasibilityScore: toNumber(row.feasibility_score),
-    createdAt: row.created_at ?? "",
-  };
+  const query = params.toString();
+  return query ? `/admin?${query}` : "/admin";
 }
 
 export default async function AdminPage({
@@ -90,36 +45,15 @@ export default async function AdminPage({
   const params = await searchParams;
   const selectedStatus = readParam(params.status);
   const selectedBusinessArea = readParam(params.businessArea);
+  const notice = readParam(params.notice);
+  const actionError = readParam(params.error);
 
-  let requests: AdminRequest[] = [];
-  let loadError = "";
-
-  try {
-    const supabase = createServerSupabaseClient();
-    const { data, error } = await supabase
-      .from(useCaseTable)
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      const details = [error.message, error.details, error.hint]
-        .filter(Boolean)
-        .join(" ");
-      loadError = details
-        ? `Could not load ideas from Supabase: ${details}`
-        : "Could not load ideas from Supabase.";
-    } else {
-      requests = ((data ?? []) as UseCaseRow[]).map(mapRowToRequest);
-    }
-  } catch {
-    loadError =
-      "Could not load ideas from Supabase. Confirm the server environment variables are available.";
-  }
-
+  const { requests, loadError } = await fetchUseCases();
   const statuses = [...new Set(requests.map((request) => request.status))];
   const businessAreas = [
     ...new Set(requests.map((request) => request.businessArea)),
   ];
+  const returnTo = buildReturnPath(selectedStatus, selectedBusinessArea);
 
   const filteredRequests = requests
     .filter((request) => {
@@ -142,6 +76,10 @@ export default async function AdminPage({
 
       if (rightTotal !== leftTotal) {
         return rightTotal - leftTotal;
+      }
+
+      if (right.adminRating !== left.adminRating) {
+        return right.adminRating - left.adminRating;
       }
 
       return right.createdAt.localeCompare(left.createdAt);
@@ -183,8 +121,8 @@ export default async function AdminPage({
               Overview
             </p>
             <p className="max-w-2xl text-lg leading-8 text-slate-600">
-              The list below shows real submissions from Supabase. Ideas with
-              the highest combined impact and feasibility score appear first.
+              Review each submission, click into the full details, and add a
+              simple 1 to 5 admin rating for overall value or potential.
             </p>
           </div>
 
@@ -203,6 +141,18 @@ export default async function AdminPage({
             </div>
           </div>
         </div>
+
+        {notice ? (
+          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-base text-emerald-800">
+            {notice}
+          </div>
+        ) : null}
+
+        {actionError ? (
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-base text-rose-800">
+            {actionError}
+          </div>
+        ) : null}
 
         {loadError ? (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-base text-rose-800">
@@ -280,13 +230,14 @@ export default async function AdminPage({
                 <th className="px-5 py-4">Feasibility</th>
                 <th className="px-5 py-4">Total score</th>
                 <th className="px-5 py-4">Status</th>
+                <th className="px-5 py-4">Admin rating</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {filteredRequests.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-5 py-8 text-center text-base text-slate-500"
                   >
                     {loadError
@@ -298,7 +249,12 @@ export default async function AdminPage({
                 filteredRequests.map((request) => (
                   <tr key={request.id} className="text-base text-slate-700">
                     <td className="px-5 py-4 font-medium text-slate-950">
-                      {request.name}
+                      <Link
+                        href={`/admin/${request.id}`}
+                        className="transition-colors hover:text-slate-700 hover:underline"
+                      >
+                        {request.name}
+                      </Link>
                     </td>
                     <td className="px-5 py-4">{request.businessArea}</td>
                     <td className="px-5 py-4">{request.priority}</td>
@@ -315,6 +271,36 @@ export default async function AdminPage({
                       >
                         {request.status}
                       </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <form action={updateIdeaRating} className="flex gap-2">
+                        <input type="hidden" name="id" value={request.id} />
+                        <input type="hidden" name="returnTo" value={returnTo} />
+                        <select
+                          name="rating"
+                          defaultValue={
+                            request.adminRating
+                              ? String(request.adminRating)
+                              : ""
+                          }
+                          className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                        >
+                          <option value="" disabled>
+                            Rate
+                          </option>
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                          <option value="5">5</option>
+                        </select>
+                        <button
+                          type="submit"
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Save
+                        </button>
+                      </form>
                     </td>
                   </tr>
                 ))
