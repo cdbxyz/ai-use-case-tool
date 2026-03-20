@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { updateIdeaRating } from "../actions";
+import { updateIdeaRating, updateIdeaScores } from "../actions";
 import { fetchUseCaseById } from "../use-cases";
 
 type PageProps = {
@@ -84,41 +84,108 @@ export default async function AdminIdeaDetailPage(props: PageProps) {
               </p>
             </div>
 
-            <form action={updateIdeaRating} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <input type="hidden" name="id" value={request.id} />
-              <input
-                type="hidden"
-                name="returnTo"
-                value={`/admin/${request.id}`}
-              />
-              <label className="grid gap-2">
-                <span className="text-base font-semibold text-slate-800">
-                  Admin rating
-                </span>
-                <select
-                  name="rating"
-                  defaultValue={
-                    request.adminRating ? String(request.adminRating) : ""
-                  }
-                  className="min-h-12 rounded-2xl border border-slate-300 bg-white px-4 text-lg text-slate-950 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
-                >
-                  <option value="" disabled>
-                    Choose rating
-                  </option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                </select>
-              </label>
-              <button
-                type="submit"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-900 px-5 text-base font-semibold text-white transition hover:bg-slate-800"
+            <div className="grid gap-4 lg:min-w-[320px]">
+              <form
+                action={updateIdeaRating}
+                className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"
               >
-                Save rating
-              </button>
-            </form>
+                <input type="hidden" name="id" value={request.id} />
+                <input
+                  type="hidden"
+                  name="returnTo"
+                  value={`/admin/${request.id}`}
+                />
+                <label className="grid gap-2">
+                  <span className="text-base font-semibold text-slate-800">
+                    Admin rating
+                  </span>
+                  <select
+                    name="rating"
+                    defaultValue={
+                      request.adminRating ? String(request.adminRating) : ""
+                    }
+                    className="min-h-12 rounded-2xl border border-slate-300 bg-white px-4 text-lg text-slate-950 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  >
+                    <option value="" disabled>
+                      Choose rating
+                    </option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-900 px-5 text-base font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Save rating
+                </button>
+              </form>
+
+              <form
+                action={updateIdeaScores}
+                className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <input type="hidden" name="id" value={request.id} />
+                <input
+                  type="hidden"
+                  name="returnTo"
+                  value={`/admin/${request.id}`}
+                />
+                <label className="grid gap-2">
+                  <span className="text-base font-semibold text-slate-800">
+                    Impact score
+                  </span>
+                  <select
+                    name="impactScore"
+                    defaultValue={
+                      request.impactScore ? String(request.impactScore) : ""
+                    }
+                    className="min-h-12 rounded-2xl border border-slate-300 bg-white px-4 text-lg text-slate-950 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  >
+                    <option value="" disabled>
+                      Choose impact
+                    </option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-base font-semibold text-slate-800">
+                    Feasibility score
+                  </span>
+                  <select
+                    name="feasibilityScore"
+                    defaultValue={
+                      request.feasibilityScore
+                        ? String(request.feasibilityScore)
+                        : ""
+                    }
+                    className="min-h-12 rounded-2xl border border-slate-300 bg-white px-4 text-lg text-slate-950 outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+                  >
+                    <option value="" disabled>
+                      Choose feasibility
+                    </option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-900 px-5 text-base font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Save scores
+                </button>
+              </form>
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
