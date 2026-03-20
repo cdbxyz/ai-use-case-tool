@@ -2,7 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const useCaseTable = process.env.SUPABASE_USE_CASES_TABLE ?? "use_cases";
 export const adminRatingColumn =
-  process.env.SUPABASE_ADMIN_RATING_COLUMN ?? "admin_rating";
+  process.env.SUPABASE_ADMIN_RATING_COLUMN ?? "rating";
 
 type SupabaseErrorShape = {
   message?: string | null;

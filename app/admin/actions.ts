@@ -7,6 +7,38 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 import { adminRatingColumn, useCaseTable } from "./use-cases";
 
+async function saveRating(
+  id: string,
+  rating: number,
+  preferredColumn: string,
+) {
+  const supabase = createServerSupabaseClient();
+
+  const firstAttempt = await supabase
+    .from(useCaseTable)
+    .update({ [preferredColumn]: rating })
+    .eq("id", id);
+
+  if (!firstAttempt.error) {
+    return { error: null };
+  }
+
+  const shouldTryFallback =
+    preferredColumn !== "rating" &&
+    firstAttempt.error.message?.includes(`'${preferredColumn}' column`);
+
+  if (!shouldTryFallback) {
+    return { error: firstAttempt.error };
+  }
+
+  const fallbackAttempt = await supabase
+    .from(useCaseTable)
+    .update({ rating })
+    .eq("id", id);
+
+  return { error: fallbackAttempt.error };
+}
+
 function buildReturnUrl(path: string, notice: string, isError = false) {
   const [pathname, query = ""] = path.split("?");
   const params = new URLSearchParams(query);
@@ -33,11 +65,7 @@ export async function updateIdeaRating(formData: FormData) {
     redirect(buildReturnUrl(returnTo, "Choose a rating from 1 to 5.", true));
   }
 
-  const supabase = createServerSupabaseClient();
-  const { error } = await supabase
-    .from(useCaseTable)
-    .update({ [adminRatingColumn]: rating })
-    .eq("id", id);
+  const { error } = await saveRating(id, rating, adminRatingColumn);
 
   if (error) {
     const details = [error.message, error.details, error.hint]
